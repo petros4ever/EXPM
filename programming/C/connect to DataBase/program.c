@@ -2,6 +2,42 @@
 #include <sqlite3.h>
 #include <stdio.h>
 
+void show_books(GtkWidget *container) {
+    sqlite3 *db;
+    sqlite3_stmt *stmt;
+    int rc = sqlite3_open("mydatabase.db", &db);
+
+    if (rc != SQLITE_OK) {
+        g_print("Σφάλμα σύνδεσης στη βάση δεδομένων!\n");
+        return;
+    }
+
+    const char *sql = "SELECT Name, author, price FROM book";
+    rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
+
+    if (rc != SQLITE_OK) {
+        g_print("Σφάλμα στην εκτέλεση του ερωτήματος!\n");
+        sqlite3_close(db);
+        return;
+    }
+
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        const char *name = (const char*)sqlite3_column_text(stmt, 0);
+        const char *author = (const char*)sqlite3_column_text(stmt, 1);
+        float price = (float)sqlite3_column_double(stmt, 2);
+
+        gchar *book_info = g_strdup_printf("📖 %s - %s (%.2f€)", name, author, price);
+        GtkWidget *label = gtk_label_new(book_info);
+        g_free(book_info);
+
+        gtk_container_add(GTK_CONTAINER(container), label);
+    }
+
+    sqlite3_finalize(stmt);
+    sqlite3_close(db);
+    gtk_widget_show_all(container);
+}
+
 void on_login_clicked(GtkWidget *widget, gpointer data) {
     GtkWidget **entries = (GtkWidget**)data;
     const gchar *username = gtk_entry_get_text(GTK_ENTRY(entries[0]));
@@ -28,9 +64,33 @@ void on_login_clicked(GtkWidget *widget, gpointer data) {
         g_print("Επιτυχής σύνδεση! Μετάβαση στην νέα οθόνη...\n");
         // Εδώ μπορείς να δημιουργήσεις ένα νέο GTK παράθυρο
         GtkWidget *new_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-        gtk_window_set_title(GTK_WINDOW(new_window), "Καλώς ήρθες!");
-        gtk_window_set_default_size(GTK_WINDOW(new_window), 400, 200);
-        gtk_widget_show_all(new_window);
+        if(g_strcmp0(username, "admin") == 0)
+        {
+            gtk_window_set_title(GTK_WINDOW(new_window), "Καλώς ήρθες admin!");
+            gtk_window_set_default_size(GTK_WINDOW(new_window), 400, 200);
+            gtk_widget_show_all(new_window);
+        }
+        else{
+           
+            gtk_window_set_default_size(GTK_WINDOW(new_window), 400, 200);
+
+            // Δημιουργία κεντρικού box container
+            GtkWidget *box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
+            gtk_container_add(GTK_CONTAINER(new_window), box);
+
+            // Δημιουργία ετικέτας καλωσορίσματος
+            gchar *welcome_msg = g_strdup_printf("Καλώς ήρθες, %s!", username);
+            GtkWidget *label = gtk_label_new(welcome_msg);
+            g_free(welcome_msg); // Απελευθέρωση μνήμης
+
+            gtk_box_pack_start(GTK_BOX(box), label, FALSE, FALSE, 5); // Προσθήκη της ετικέτας στο Box
+
+           // Εμφάνιση των βιβλίων μέσα στο ίδιο Box
+           show_books(box); 
+
+            gtk_window_set_title(GTK_WINDOW(new_window), "Διαθέσιμα Βιβλία");
+           gtk_widget_show_all(new_window);
+        }
     } else {
         g_print("Λάθος στοιχεία! Παρακαλώ δοκιμάστε ξανά.\n");
     }
