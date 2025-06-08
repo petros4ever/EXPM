@@ -1,8 +1,49 @@
+
 #include <gtk/gtk.h>
 #include <sqlite3.h>
 #include <stdio.h>
 
-void show_books(GtkWidget *container) {
+typedef struct {
+    int user_id;
+    int book_id;
+} PurchaseData;
+
+void on_buy_clicked(GtkWidget *widget, gpointer data) {
+    PurchaseData *purchase = (PurchaseData*)data; // Μετατροπή σε σωστό struct
+    sqlite3 *db;
+    sqlite3_stmt *stmt;
+    int rc = sqlite3_open("mydatabase.db", &db); 
+
+    if (rc != SQLITE_OK) {
+        g_print("Σφάλμα σύνδεσης στη βάση δεδομένων!\n");
+        return;
+    }
+
+    // SQL εντολή για εισαγωγή στην βάση
+    const char *sql = "INSERT INTO bought_books (user_id, book_id) VALUES (?, ?)";
+    
+    rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
+    if (rc != SQLITE_OK) {
+        g_print("Σφάλμα SQL: %s\n", sqlite3_errmsg(db));
+        sqlite3_close(db);
+        return;
+    }
+
+    sqlite3_bind_int(stmt, 1, purchase->user_id);
+    sqlite3_bind_int(stmt, 2, purchase->book_id);
+
+    if (sqlite3_step(stmt) == SQLITE_DONE) {
+        g_print("Το βιβλίο αγοράστηκε επιτυχώς!\n");
+    } else {
+        g_print("Η αγορά απέτυχε!\n");
+    }
+
+    sqlite3_finalize(stmt);
+    sqlite3_close(db);
+    g_free(purchase); // Απελευθέρωση μνήμης
+}
+
+void show_books(GtkWidget *container, int user_id) {
     sqlite3 *db;
     sqlite3_stmt *stmt;
     int rc = sqlite3_open("mydatabase.db", &db);
@@ -12,7 +53,7 @@ void show_books(GtkWidget *container) {
         return;
     }
 
-    const char *sql = "SELECT Name, author, price FROM book";
+    const char *sql = "SELECT ID, Name, author, price FROM book";
     rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
 
     if (rc != SQLITE_OK) {
@@ -22,15 +63,29 @@ void show_books(GtkWidget *container) {
     }
 
     while (sqlite3_step(stmt) == SQLITE_ROW) {
-        const char *name = (const char*)sqlite3_column_text(stmt, 0);
-        const char *author = (const char*)sqlite3_column_text(stmt, 1);
-        float price = (float)sqlite3_column_double(stmt, 2);
+        int book_id = sqlite3_column_int(stmt, 0);
+        const char *name = (const char*)sqlite3_column_text(stmt, 1);
+        const char *author = (const char*)sqlite3_column_text(stmt, 2);
+        float price = (float)sqlite3_column_double(stmt, 3);
+
+        GtkWidget *row_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 10);
+        gtk_container_add(GTK_CONTAINER(container), row_box);
 
         gchar *book_info = g_strdup_printf("📖 %s - %s (%.2f€)", name, author, price);
         GtkWidget *label = gtk_label_new(book_info);
         g_free(book_info);
 
-        gtk_container_add(GTK_CONTAINER(container), label);
+        GtkWidget *buy_button = gtk_button_new_with_label("Αγορά");
+
+        // Δημιουργία δομής `PurchaseData`
+        PurchaseData *purchase = g_malloc(sizeof(PurchaseData));
+        purchase->user_id = user_id;
+        purchase->book_id = book_id;
+
+        g_signal_connect(buy_button, "clicked", G_CALLBACK(on_buy_clicked), purchase);
+
+        gtk_box_pack_start(GTK_BOX(row_box), label, FALSE, FALSE, 5);
+        gtk_box_pack_start(GTK_BOX(row_box), buy_button, FALSE, FALSE, 5);
     }
 
     sqlite3_finalize(stmt);
@@ -62,6 +117,7 @@ void on_login_clicked(GtkWidget *widget, gpointer data) {
 
     if (rc == SQLITE_ROW) {
         g_print("Επιτυχής σύνδεση! Μετάβαση στην νέα οθόνη...\n");
+        int user_id = sqlite3_column_int(stmt, 0); // Ανάκτηση του user_id από τη βάση
         // Εδώ μπορείς να δημιουργήσεις ένα νέο GTK παράθυρο
         GtkWidget *new_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
         if(g_strcmp0(username, "admin") == 0)
@@ -86,7 +142,7 @@ void on_login_clicked(GtkWidget *widget, gpointer data) {
             gtk_box_pack_start(GTK_BOX(box), label, FALSE, FALSE, 5); // Προσθήκη της ετικέτας στο Box
 
            // Εμφάνιση των βιβλίων μέσα στο ίδιο Box
-           show_books(box); 
+           show_books(box,user_id); 
 
             gtk_window_set_title(GTK_WINDOW(new_window), "Διαθέσιμα Βιβλία");
            gtk_widget_show_all(new_window);
