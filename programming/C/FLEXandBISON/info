@@ -1,6 +1,9 @@
-calculator for "+","-","*","/","%",square function and max function
+calculator for "+","-","*","/","%",square function and max function(lexer.l and parser.y)
 commands:
 bison -d parser.y
 flex lexer.l
 gcc -o calc lex.yy.c parser.tab.c -lfl
 ./calc
+
+xml file reader:
+w.l and e.y
