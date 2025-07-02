@@ -133,6 +133,6 @@ int main() {
         }
     }
 
-    deleteTree(root); // Ασφαλής απελευθέρωση μνήμης
+    deleteTree(root); 
     return 0;
 }
