@@ -13,7 +13,7 @@ struct Node {
     Node(int id, const std::string& str) : id(id), str(str), left(nullptr), right(nullptr) {}
 };
 
-// Εισαγωγή κόμβου
+
 Node* insertNode(Node* root, int id, const std::string& str) {
     if (root == nullptr) {
         return new Node(id, str);
@@ -26,7 +26,7 @@ Node* insertNode(Node* root, int id, const std::string& str) {
     return root;
 }
 
-// Εκτύπωση inorder
+
 void printTree(Node* root) {
     if (!root) return;
     printTree(root->left);
@@ -34,14 +34,14 @@ void printTree(Node* root) {
     printTree(root->right);
 }
 
-// Εύρεση ελάχιστου κόμβου
+
 Node* findMin(Node* node) {
     while (node && node->left)
         node = node->left;
     return node;
 }
 
-// Διαγραφή κόμβου
+
 Node* deleteNode(Node* root, int id) {
     if (!root) return nullptr;
 
@@ -71,7 +71,7 @@ Node* deleteNode(Node* root, int id) {
     return root;
 }
 
-// Διαγραφή όλου του δέντρου (για καθαρότητα)
+
 void deleteTree(Node* root) {
     if (!root) return;
     deleteTree(root->left);
