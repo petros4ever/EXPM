@@ -1,0 +1,21 @@
+Nodes:
+3 banana
+1 apple
+5 cherry
+4 date
+2 elderberry
+7 elf
+10 men
+8 hippos
+9 penguins
+6 r
+Edges:
+5 4
+5 6
+4 3
+3 2
+2 1
+6 7
+7 8
+8 9
+9 10
