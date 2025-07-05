@@ -138,7 +138,7 @@ int main() {
     int goal_index = id_to_index[goal_id];
 
     int start_index = id_to_index[start_id];
-    std::cout << "astar starting from node ID " << start_id << " to " << goal_id << ":\n";
+    std::cout << "Dijkstra starting from node ID " << start_id << " to " << goal_id << ":\n";
     dijkstra(graph, nodes, start_index,goal_index);
 
     return 0;
