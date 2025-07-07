@@ -1,3 +1,5 @@
+//This project is inspired by a tutorial by ProgrammingKnowledge on youtube
+//I used the core concept as a learning base and rewrote the code using modern C++ practices, restructuring the implementation and adding new features.
 #include <iostream>
 #include <unistd.h>
 #include <termios.h>
