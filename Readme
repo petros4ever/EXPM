@@ -10,5 +10,6 @@ EXPM->games
                  ->java->project
                  ->python->bioinformatics
                          ->socket 
+                         ->DigitalTelecommunications
      ->Designing->c application
                 ->webserver
