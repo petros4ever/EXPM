@@ -1,5 +1,6 @@
 structure of repository:
-EXPM->programming->C->Data_Structures->sorting_algorithms
+EXPM->games
+     ->programming->C->Data_Structures->sorting_algorithms
                                      ->Tree
                     ->FLEXandBISON
                     ->searching_algorithms
