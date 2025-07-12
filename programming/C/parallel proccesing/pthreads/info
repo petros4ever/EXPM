@@ -1,0 +1,2 @@
+gcc -pthread mythreads.c -o mythreads
+./mythreads
