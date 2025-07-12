@@ -4,6 +4,7 @@ EXPM->games
                                      ->Tree
                     ->FLEXandBISON
                     ->searching_algorithms
+                    ->Paralell Processing->Pthreads
                  ->C++->sorting
                       ->trees
                       ->searching
