@@ -1,7 +1,10 @@
 #include <SFML/Graphics.hpp>
+#include <iostream>
+
 void playSinglePlayer(sf::RenderWindow& window) {
-    sf::View view(sf::FloatRect(0, 0, 800, 600)); // αρχική κάμερα
-    // Φόρτωση Background
+    sf::View view(sf::FloatRect(0, 0, 800, 600));
+
+    // Background
     sf::Texture backgroundTexture;
     backgroundTexture.loadFromFile("background2.png");
     sf::Sprite backgroundSprite(backgroundTexture);
@@ -10,36 +13,66 @@ void playSinglePlayer(sf::RenderWindow& window) {
         (float)window.getSize().y / backgroundTexture.getSize().y
     );
 
-    // Φόρτωση Παίκτη
-    sf::Texture playerTexture;
-    playerTexture.loadFromFile("player1.png");
-    sf::Sprite playerSprite(playerTexture);
-    playerSprite.setPosition(100, 500);
-
-    // Πλατφόρμες
     std::vector<sf::RectangleShape> platforms;
-
-    sf::RectangleShape ground(sf::Vector2f(2000, 50)); // Πίστα μήκους 2000 pixels
+    //ground
+    sf::RectangleShape ground(sf::Vector2f(2000, 50));
     ground.setPosition(0, 550);
     ground.setFillColor(sf::Color::Green);
     platforms.push_back(ground);
+
+    // Παίκτης
+    sf::Texture playerTexture;
+    playerTexture.loadFromFile("player1.png");
+    sf::Sprite playerSprite(playerTexture);
+    playerSprite.setPosition(100, ground.getPosition().y - playerSprite.getGlobalBounds().height);
+
+    // Εχθρός
+    sf::Texture enemyTexture;
+    enemyTexture.loadFromFile("enemy.png");
+    sf::Sprite enemySprite(enemyTexture);
+    enemySprite.setPosition(1000, 500);
+
+    float enemySpeed = 1.0f;
+    int enemyDirection = 1;
+
+    // Lives
+    int playerLives = 3;
+    sf::Font font;
+    font.loadFromFile("arial.ttf");
+    sf::Text livesText("Lives: 3", font, 24);
+    livesText.setFillColor(sf::Color::White);
+    livesText.setPosition(10, 10);
+
+    // Πλατφόρμες
+    
 
     sf::RectangleShape platform1(sf::Vector2f(150, 20));
     platform1.setPosition(900, 480);
     platform1.setFillColor(sf::Color::Red);
     platforms.push_back(platform1);
 
-     sf::RectangleShape platform2(sf::Vector2f(150, 20));
-     platform2.setPosition(1300, 450);
-     platform2.setFillColor(sf::Color::Yellow);
-     platforms.push_back(platform2);
+    sf::RectangleShape platform2(sf::Vector2f(150, 20));
+    platform2.setPosition(1300, 450);
+    platform2.setFillColor(sf::Color::Yellow);
+    platforms.push_back(platform2);
 
+    sf::RectangleShape platformA(sf::Vector2f(150, 20));
+    platformA.setPosition(1000, 480);
+    platformA.setFillColor(sf::Color::Yellow);
+    platforms.push_back(platformA);
 
-    // Φυσική και κίνηση
+    sf::RectangleShape platformB(sf::Vector2f(150, 20));
+    platformB.setPosition(1300, 400);
+    platformB.setFillColor(sf::Color::Magenta);
+    platforms.push_back(platformB);
+
+    sf::RectangleShape finish(sf::Vector2f(50, 80));
+    finish.setPosition(1800, 470);
+    finish.setFillColor(sf::Color::Red);
+
     float velocityY = 0;
     bool isOnGround = false;
 
-    // Main game loop
     sf::Event event;
     while (window.isOpen()) {
         while (window.pollEvent(event)) {
@@ -48,12 +81,10 @@ void playSinglePlayer(sf::RenderWindow& window) {
         }
 
         // Χειρισμός
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::A)) {
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::A))
             playerSprite.move(-0.5f, 0);
-        }
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::D)) {
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::D))
             playerSprite.move(0.5f, 0);
-        }
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space) && isOnGround) {
             velocityY = -10.0f;
             isOnGround = false;
@@ -63,66 +94,84 @@ void playSinglePlayer(sf::RenderWindow& window) {
         velocityY += 0.5f;
         playerSprite.move(0, velocityY);
 
-        // Έλεγχος εδάφους
-        if (playerSprite.getGlobalBounds().intersects(ground.getGlobalBounds())) {
-            velocityY = 0;
-            isOnGround = true;
-            playerSprite.setPosition(playerSprite.getPosition().x, ground.getPosition().y - playerSprite.getGlobalBounds().height);
+        // Εχθρός κινείται
+        enemySprite.move(enemySpeed * enemyDirection, 0);
+        if (enemySprite.getPosition().x < 950 || enemySprite.getPosition().x > 1150)
+            enemyDirection *= -1;
+
+        // Έλεγχος επαφής με πλατφόρμες
+        isOnGround = false;
+        for (auto& platform : platforms) {
+            sf::FloatRect playerBounds = playerSprite.getGlobalBounds();
+            sf::FloatRect platBounds = platform.getGlobalBounds();
+
+            bool landed =
+                playerBounds.top + playerBounds.height <= platBounds.top + 5 &&
+                playerBounds.top + playerBounds.height + velocityY >= platBounds.top &&
+                playerBounds.left + playerBounds.width > platBounds.left &&
+                playerBounds.left < platBounds.left + platBounds.width;
+
+            if (landed) {
+                velocityY = 0;
+                isOnGround = true;
+                playerSprite.setPosition(playerBounds.left, platBounds.top - playerBounds.height);
+            }
         }
-        if (playerSprite.getGlobalBounds().intersects(platform1.getGlobalBounds())) {
-        velocityY = 0;
-        isOnGround = true;
-        playerSprite.setPosition(
-        playerSprite.getPosition().x,
-        platform1.getPosition().y - playerSprite.getGlobalBounds().height);
-        }
-        
-        sf::FloatRect playerBounds = playerSprite.getGlobalBounds();
-        sf::FloatRect platformBounds = platform1.getGlobalBounds();
 
-        bool isLandingOnPlatform =
-        playerBounds.top + playerBounds.height <= platformBounds.top + 5 &&
-        playerBounds.top + playerBounds.height + velocityY >= platformBounds.top &&
-        playerBounds.left + playerBounds.width > platformBounds.left &&
-        playerBounds.left < platformBounds.left + platformBounds.width;
-
-        if (isLandingOnPlatform) {
-         velocityY = 0;
-         isOnGround = true;
-         playerSprite.setPosition(playerBounds.left, platformBounds.top - playerBounds.height);
-         }
-
-        view.setCenter(playerSprite.getPosition()); // κάμερα ακολουθεί τον παίκτη
-        window.setView(view);
-        sf::RectangleShape platformA(sf::Vector2f(150, 20));
-        platformA.setPosition(1000, 480);
-        platformA.setFillColor(sf::Color::Yellow);
-  
-        backgroundSprite.setPosition(view.getCenter().x - 400, 0);
-
-
-        sf::RectangleShape platformB(sf::Vector2f(150, 20));
-        platformB.setPosition(1300, 400);
-        platformB.setFillColor(sf::Color::Magenta);
-
-        sf::RectangleShape finish(sf::Vector2f(50, 80));
-        finish.setPosition(1800, 470);
-        finish.setFillColor(sf::Color::Red);
-
-        if (playerSprite.getGlobalBounds().intersects(finish.getGlobalBounds())) {
+        // Έλεγχος finish
+        if (playerSprite.getGlobalBounds().intersects(finish.getGlobalBounds()))
             window.close();
-       }
 
+        // Εχθρός: πάτημα από πάνω
+        sf::FloatRect playerBounds = playerSprite.getGlobalBounds();
+        sf::FloatRect enemyBounds = enemySprite.getGlobalBounds();
+
+        bool stompedEnemy =
+            playerBounds.top + playerBounds.height < enemyBounds.top + 10 &&
+            playerBounds.top + playerBounds.height + velocityY >= enemyBounds.top &&
+            playerBounds.left < enemyBounds.left + enemyBounds.width &&
+            playerBounds.left + playerBounds.width > enemyBounds.left;
+
+        if (stompedEnemy) {
+            enemySprite.setPosition(-1000, -1000);
+            velocityY = -10.0f;
+        }
+
+        // Αν δεν έγινε πάτημα: ζημιά
+        if (playerSprite.getGlobalBounds().intersects(enemySprite.getGlobalBounds()) && !stompedEnemy) {
+            playerLives--;
+            playerSprite.setPosition(100, ground.getPosition().y - playerSprite.getGlobalBounds().height);
+            velocityY = 0;        // σταματά η πτώση
+            isOnGround = true;    // θεωρείται ότι πατάει στο έδαφος
+            livesText.setString("Lives: " + std::to_string(playerLives));
+        }
+
+        if (playerLives <= 0) {
+            std::cout << "Game Over\n";
+            window.close();
+        }
+
+        // Κάμερα & background
+        view.setCenter(playerSprite.getPosition());
+        window.setView(view);
+        backgroundSprite.setPosition(view.getCenter().x - 400, 0);
 
         // Render
         window.clear();
         window.draw(backgroundSprite);
-        window.draw(ground);
-        window.draw(platform1);
+        for (auto& plat : platforms)
+            window.draw(plat);
+
+        window.draw(finish);
+        window.draw(enemySprite);
         window.draw(playerSprite);
+        window.setView(window.getDefaultView());
+        window.draw(livesText);
+        window.setView(view);
         window.display();
     }
 }
+
 
 int main()
 {
