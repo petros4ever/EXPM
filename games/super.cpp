@@ -1,6 +1,117 @@
 #include <SFML/Graphics.hpp>
 #include <iostream>
 
+void playLevel2(sf::RenderWindow& window)
+{
+      sf::View view(sf::FloatRect(0, 0, 800, 600));
+
+    // Background
+    sf::Texture bgTexture;
+    bgTexture.loadFromFile("level2_bg.png");
+    sf::Sprite bgSprite(bgTexture);
+
+    // Παίκτης
+    sf::Texture playerTexture;
+    playerTexture.loadFromFile("player1.png");
+    sf::Sprite playerSprite(playerTexture);
+    
+
+    // Platforms
+    std::vector<sf::RectangleShape> platforms;
+
+    sf::RectangleShape ground(sf::Vector2f(4000, 50)); // μεγάλο έδαφος
+    ground.setPosition(0, 550);
+    ground.setFillColor(sf::Color::Green);
+    platforms.push_back(ground);
+    playerSprite.setPosition(100, ground.getPosition().y - playerSprite.getGlobalBounds().height);
+    // Πλατφόρμες με gaps
+    sf::RectangleShape platA(sf::Vector2f(150, 20));
+    platA.setPosition(700, 400); platforms.push_back(platA);
+
+    sf::RectangleShape platB(sf::Vector2f(150, 20));
+    platB.setPosition(1100, 350); platforms.push_back(platB);
+
+    sf::RectangleShape platC(sf::Vector2f(150, 20));
+    platC.setPosition(1500, 420); platforms.push_back(platC);
+
+    // Finish flag
+    sf::RectangleShape finish(sf::Vector2f(50, 80));
+    finish.setPosition(3800, 470);
+    finish.setFillColor(sf::Color::Red);
+
+    // Φυσική
+    float velocityY = 0;
+    bool isOnGround = true;
+
+    // Game loop
+    while (window.isOpen()) {
+        sf::Event event;
+        while (window.pollEvent(event)) {
+            if (event.type == sf::Event::Closed)
+                window.close();
+        }
+
+        // Κίνηση παίκτη
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::A))
+            playerSprite.move(-0.5f, 0);
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::D))
+            playerSprite.move(0.5f, 0);
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space) && isOnGround) {
+            velocityY = -10.0f;
+            isOnGround = false;
+        }
+
+        velocityY += 0.5f;
+        playerSprite.move(0, velocityY);
+        isOnGround = false;
+
+        // Έλεγχος πλατφόρμας
+        for (auto& plat : platforms) {
+            sf::FloatRect pBounds = playerSprite.getGlobalBounds();
+            sf::FloatRect platBounds = plat.getGlobalBounds();
+
+            bool landed =
+                pBounds.top + pBounds.height <= platBounds.top + 5 &&
+                pBounds.top + pBounds.height + velocityY >= platBounds.top &&
+                pBounds.left + pBounds.width > platBounds.left &&
+                pBounds.left < platBounds.left + platBounds.width;
+
+            if (landed) {
+                velocityY = 0;
+                isOnGround = true;
+                playerSprite.setPosition(pBounds.left, platBounds.top - pBounds.height);
+            }
+        }
+
+        // Gaps / πτώση
+        if (playerSprite.getPosition().y > 600) {
+            playerSprite.setPosition(100, 500); // reset
+            velocityY = 0;
+        }
+
+        // Finish flag
+        if (playerSprite.getGlobalBounds().intersects(finish.getGlobalBounds())) {
+            std::cout << "Level 2 complete!\n";
+            window.close(); // ή πέρασμα σε επόμενη πίστα
+        }
+
+        // Κάμερα
+        view.setCenter(playerSprite.getPosition());
+        window.setView(view);
+
+        // Render
+        window.clear();
+        bgSprite.setPosition(view.getCenter().x - 400, 0);
+        window.draw(bgSprite);
+        for (auto& plat : platforms)
+            window.draw(plat);
+        window.draw(finish);
+        window.draw(playerSprite);
+        window.display();
+    }
+}
+
+
 void playSinglePlayer(sf::RenderWindow& window) {
     sf::View view(sf::FloatRect(0, 0, 800, 600));
 
@@ -74,6 +185,10 @@ void playSinglePlayer(sf::RenderWindow& window) {
     bool isOnGround = false;
 
     sf::Event event;
+    bool isInvincible = false;
+    sf::Clock invincibleClock;
+    sf::Clock rockCooldown;
+    std::vector<sf::CircleShape> rocks;
     while (window.isOpen()) {
         while (window.pollEvent(event)) {
             if (event.type == sf::Event::Closed)
@@ -120,7 +235,46 @@ void playSinglePlayer(sf::RenderWindow& window) {
 
         // Έλεγχος finish
         if (playerSprite.getGlobalBounds().intersects(finish.getGlobalBounds()))
-            window.close();
+        {
+            playLevel2(window);
+            return;
+         }
+            
+
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::F) && !isInvincible) {
+           isInvincible = true;
+           invincibleClock.restart();
+           playerSprite.setColor(sf::Color::Cyan); // Χρώμα ασπίδας
+        }
+
+        if (isInvincible && invincibleClock.getElapsedTime().asSeconds() > 5.0f) {
+            isInvincible = false;
+            playerSprite.setColor(sf::Color::White); // Επιστροφή στο φυσιολογικό
+        }
+
+        
+
+                 if (sf::Keyboard::isKeyPressed(sf::Keyboard::G) && rockCooldown.getElapsedTime().asSeconds() > 0.5f) {
+                        sf::CircleShape rock(10);
+                        rock.setFillColor(sf::Color::Blue);
+                        rock.setPosition(playerSprite.getPosition().x + 30, playerSprite.getPosition().y + 20);
+                        rocks.push_back(rock);
+                        rockCooldown.restart(); // reset cooldown
+                    }
+
+
+        for (size_t i = 0; i < rocks.size(); ++i) {
+             rocks[i].move(4.0f, 0); // ευθύγραμμα δεξιά
+
+            if (rocks[i].getGlobalBounds().intersects(enemySprite.getGlobalBounds())) {
+                 enemySprite.setPosition(-1000, -1000);
+                 rocks.erase(rocks.begin() + i);
+                 --i;
+            }
+        }
+
+        
+
 
         // Εχθρός: πάτημα από πάνω
         sf::FloatRect playerBounds = playerSprite.getGlobalBounds();
@@ -138,7 +292,7 @@ void playSinglePlayer(sf::RenderWindow& window) {
         }
 
         // Αν δεν έγινε πάτημα: ζημιά
-        if (playerSprite.getGlobalBounds().intersects(enemySprite.getGlobalBounds()) && !stompedEnemy) {
+        if (playerSprite.getGlobalBounds().intersects(enemySprite.getGlobalBounds()) && !stompedEnemy && !isInvincible ) {
             playerLives--;
             playerSprite.setPosition(100, ground.getPosition().y - playerSprite.getGlobalBounds().height);
             velocityY = 0;        // σταματά η πτώση
@@ -165,6 +319,8 @@ void playSinglePlayer(sf::RenderWindow& window) {
         window.draw(finish);
         window.draw(enemySprite);
         window.draw(playerSprite);
+        for (auto& rock : rocks)
+            window.draw(rock);
         window.setView(window.getDefaultView());
         window.draw(livesText);
         window.setView(view);
@@ -172,147 +328,69 @@ void playSinglePlayer(sf::RenderWindow& window) {
     }
 }
 
+void   playMultiplayer(sf::RenderWindow& window){
+return ;
+}
 
-int main()
-{
+int main() {
     sf::RenderWindow window(sf::VideoMode(800, 600), "Super Petros Adventure");
-    sf::Event event;
     sf::Font font;
-    if (!font.loadFromFile("arial.ttf")) {
-        return -1;
-    }
-    sf::Texture backgroundTexture;
-    if (!backgroundTexture.loadFromFile("background.png")) {
-    return -1;
-    }
+    if (!font.loadFromFile("arial.ttf")) return -1;
 
+    // Background
+    sf::Texture backgroundTexture;
+    if (!backgroundTexture.loadFromFile("background.png")) return -1;
+    sf::Sprite backgroundSprite(backgroundTexture);
+    backgroundSprite.setScale(
+        static_cast<float>(window.getSize().x) / backgroundTexture.getSize().x,
+        static_cast<float>(window.getSize().y) / backgroundTexture.getSize().y
+    );
+
+    // Buttons
     sf::RectangleShape button1(sf::Vector2f(200, 50));
     button1.setPosition(300, 250);
     button1.setFillColor(sf::Color::Blue);
-    sf::Text text1;
-    text1.setString("1 Player");
-    text1.setFont(font);
-    text1.setCharacterSize(24);
+
+    sf::Text text1("1 Player", font, 24);
     text1.setPosition(320, 260);
     text1.setFillColor(sf::Color::White);
-
 
     sf::RectangleShape button2(sf::Vector2f(200, 50));
     button2.setPosition(300, 350);
     button2.setFillColor(sf::Color::Blue);
-    sf::Text text2;
-    text2.setString("2 Players");
-    text2.setFont(font);
-    text2.setCharacterSize(24);
+
+    sf::Text text2("2 Players", font, 24);
     text2.setPosition(310, 360);
+    text2.setFillColor(sf::Color::White);
 
-    
-
-    sf::Sprite backgroundSprite;
-    backgroundSprite.setTexture(backgroundTexture);
-
-  
-    sf::Vector2u textureSize = backgroundTexture.getSize();
-    sf::Vector2u windowSize = window.getSize();
-
-    float scaleX = static_cast<float>(windowSize.x) / textureSize.x;
-    float scaleY = static_cast<float>(windowSize.y) / textureSize.y;
-
-    backgroundSprite.setScale(scaleX, scaleY);
-
-    sf::Texture playerTexture;
-     if (!playerTexture.loadFromFile("player1.png")) 
-     {
-        return -1;
-     }
-
-     sf::Sprite playerSprite;
-     playerSprite.setTexture(playerTexture);
-     playerSprite.setPosition(100, 500); // αρχική θέση
-
-    sf::Texture player2Texture;
-    if (!player2Texture.loadFromFile("player2.png")) {
-    return -1;
-    }
-   
-   sf::Sprite player2Sprite;
-   player2Sprite.setTexture(player2Texture);
-   player2Sprite.setPosition(600, 500); // διαφορετική αρχική θέση
-
-
-    while (window.isOpen())
-    {
-        while (window.pollEvent(event))
-        {
+    while (window.isOpen()) {
+        sf::Event event;
+        while (window.pollEvent(event)) {
+            // Κλείσιμο παραθύρου
             if (event.type == sf::Event::Closed)
                 window.close();
-        }
-        if (sf::Mouse::isButtonPressed(sf::Mouse::Left)) 
-        {
-             sf::Vector2i mousePos = sf::Mouse::getPosition(window);
-             if (sf::Keyboard::isKeyPressed(sf::Keyboard::A)) {
-             playerSprite.move(-0.5f, 0); 
-             }
-             if (sf::Keyboard::isKeyPressed(sf::Keyboard::D)) {
-             playerSprite.move(0.5f, 0); 
-             }
-             float velocityY = 0;
-             bool isOnGround = false;
 
-             if (!isOnGround) {
-             velocityY += 0.5f;              
-             playerSprite.move(0, velocityY);
-             }
-             if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space) && isOnGround) {
-             velocityY = -10.0f; // προς τα πάνω
-             isOnGround = false;
-             }
-
-
-             if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left)) {
-                  player2Sprite.move(-0.5f, 0);
-             }
-             if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right)) {
-             player2Sprite.move(0.5f, 0);
-             }
-       
-            float player2VelocityY = 0;
-            bool player2OnGround = true;
-
-            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up) && player2OnGround) {
-                  player2VelocityY = -10.0f; // αρνητική τιμή = άλμα προς τα πάνω
-                  player2OnGround = false;
+            // Χειρισμός mouse click
+            if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left) {
+                sf::Vector2i mousePos = sf::Mouse::getPosition(window);
+                if (button1.getGlobalBounds().contains(static_cast<float>(mousePos.x), static_cast<float>(mousePos.y))) {
+                    playSinglePlayer(window);
+                    return 0;
+                }
+                if (button2.getGlobalBounds().contains(static_cast<float>(mousePos.x), static_cast<float>(mousePos.y))) {
+                    playMultiplayer(window);
+                    return 0;
+                }
             }
+        }
 
-            player2VelocityY += 0.5f; // βαρύτητα
-            player2Sprite.move(0, player2VelocityY);
-
-           // Έλεγχος αν παίκτης είναι στο έδαφος
-           if (player2Sprite.getPosition().y >= 500) {
-           player2Sprite.setPosition(player2Sprite.getPosition().x, 500);
-           player2VelocityY = 0;
-           player2OnGround = true;
-           }
-
-             if (button1.getGlobalBounds().contains(static_cast<float>(mousePos.x), static_cast<float>(mousePos.y))) 
-             {
-                  playSinglePlayer(window);
-
-             }
-    if (button2.getGlobalBounds().contains(static_cast<float>(mousePos.x), static_cast<float>(mousePos.y))) {
-        
-             }
-          }
+        // Draw menu
         window.clear();
         window.draw(backgroundSprite);
-        window.draw(playerSprite);
-        window.draw(player2Sprite);
-        window.draw(button1);
-        window.draw(text1);
-        window.draw(button2);
-        window.draw(text2);
+        window.draw(button1); window.draw(text1);
+        window.draw(button2); window.draw(text2);
         window.display();
-       }
-    
+    }
+
     return 0;
 }
